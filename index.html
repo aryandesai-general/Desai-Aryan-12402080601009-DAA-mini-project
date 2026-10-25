@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Traffic Shortest Path Finder | Dijkstra's Algorithm (Pure C Project)</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header class="app-header">
+    <div class="header-content">
+      <div class="title-group">
+        <div class="badge">DAA College Project &bull; Dijkstra's Algorithm</div>
+        <h1>Traffic Shortest Path Finder</h1>
+        <p class="subtitle">Dynamic Urban Traffic Routing Across 8 City Nodes (A to H)</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- Controls Panel -->
+    <section class="controls-panel card">
+      <div class="controls-grid">
+        <!-- Start Node Selection -->
+        <div class="control-group">
+          <label for="startNode">
+            <span class="node-indicator start-dot"></span> Starting Location:
+          </label>
+          <select id="startNode" class="form-select">
+            <option value="A" selected>Node A - Central Terminus</option>
+            <option value="B">Node B - North Tech Hub</option>
+            <option value="C">Node C - South Market</option>
+            <option value="D">Node D - City Center</option>
+            <option value="E">Node E - Industrial Zone</option>
+            <option value="F">Node F - Metro Plaza</option>
+            <option value="G">Node G - University & Medical Hub</option>
+            <option value="H">Node H - Airport Terminal</option>
+          </select>
+        </div>
+
+        <!-- Destination Node Selection -->
+        <div class="control-group">
+          <label for="destNode">
+            <span class="node-indicator dest-dot"></span> Destination Location:
+          </label>
+          <select id="destNode" class="form-select">
+            <option value="A">Node A - Central Terminus</option>
+            <option value="B">Node B - North Tech Hub</option>
+            <option value="C">Node C - South Market</option>
+            <option value="D">Node D - City Center</option>
+            <option value="E">Node E - Industrial Zone</option>
+            <option value="F">Node F - Metro Plaza</option>
+            <option value="G">Node G - University & Medical Hub</option>
+            <option value="H" selected>Node H - Airport Terminal</option>
+          </select>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="control-actions">
+          <button id="findRouteBtn" class="btn btn-primary">
+            <span class="btn-icon">⚡</span> Find Shortest Route
+          </button>
+          <button id="resetBtn" class="btn btn-secondary">
+            <span class="btn-icon">↺</span> Reset All
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Demo Presets -->
+      <div class="presets-bar">
+        <span class="presets-label">Quick Presentation Demos:</span>
+        <button class="preset-pill" onclick="loadPreset('normal_A_to_H')">
+          1. Direct Highway (A ➔ H via Center)
+        </button>
+        <button class="preset-pill" onclick="loadPreset('heavy_traffic_reroute')">
+          2. Rush Hour Congestion (Reroute via North A-B-E-G-H)
+        </button>
+        <button class="preset-pill" onclick="loadPreset('south_bypass')">
+          3. South Bypass Route (A ➔ C ➔ F ➔ H)
+        </button>
+      </div>
+
+      <!-- Validation Alert -->
+      <div id="validationAlert" class="alert-box alert-error" style="display: none;">
+        <strong>Invalid Selection:</strong> Starting location and destination cannot be the same.
+      </div>
+    </section>
+
+    <!-- Workspace Grid: Visual Network + Live Traffic Controls -->
+    <div class="workspace-grid">
+
+      <!-- Left Column: Road Network Visualization -->
+      <section class="graph-section card">
+        <div class="card-header">
+          <div class="header-left">
+            <h2>Road Network Visualization (8 City Nodes)</h2>
+            <p>Click on any road to toggle between <strong>Normal</strong> (50 km/h) and <strong>Heavy</strong> traffic (20 km/h)</p>
+          </div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-box path-color"></span> Shortest Route</span>
+            <span class="legend-item"><span class="legend-box normal-color"></span> Clear Road</span>
+            <span class="legend-item"><span class="legend-box heavy-color"></span> Heavy Traffic</span>
+          </div>
+        </div>
+
+        <!-- SVG Graph Canvas -->
+        <div class="svg-wrapper">
+          <svg id="networkGraph" viewBox="0 0 820 460" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <!-- High-intensity glowing shadow for route highlight -->
+              <filter id="routeGlow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="5" result="blur" />
+                <feComponentTransfer in="blur" result="boost">
+                  <feFuncA type="linear" slope="1.8"/>
+                </feComponentTransfer>
+                <feMerge>
+                  <feMergeNode in="boost" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <!-- Node halo filter -->
+              <filter id="nodeGlow" x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            <!-- Layer 1: Base Roads (Lines) -->
+            <g id="roadLinesLayer"></g>
+
+            <!-- Layer 2: Stable Road Distance Badges -->
+            <g id="roadLabelsLayer"></g>
+
+            <!-- Layer 3: Shortest Path Highlight (Overlay - Drawn on Top for Complete Continuous Path) -->
+            <g id="shortestPathLayer"></g>
+
+            <!-- Layer 4: Nodes (Circles & Labels) -->
+            <g id="nodesLayer"></g>
+          </svg>
+        </div>
+      </section>
+
+      <!-- Right Column: Simple Traffic Simulator -->
+      <section class="traffic-section card">
+        <div class="card-header">
+          <h2>Traffic Simulator</h2>
+          <span class="badge-count" id="heavyCountBadge">0 Heavy Roads</span>
+        </div>
+        <p class="helper-text">
+          Toggle roads to simulate rush-hour bottlenecks. Dijkstra automatically shifts to faster detours.
+        </p>
+
+        <div class="traffic-list" id="trafficList">
+          <!-- Populated dynamically by script.js -->
+        </div>
+
+        <div class="traffic-footer-actions">
+          <button class="btn btn-outline" id="clearTrafficBtn">Clear All Traffic</button>
+          <button class="btn btn-outline" id="setAllHeavyBtn">Jam Center Roads (A-D, D-H)</button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Results Section -->
+    <section class="results-section card" id="resultsCard">
+      <div class="card-header">
+        <h2>Optimal Route Results</h2>
+        <span class="badge-status status-success" id="resultStatusBadge">Route Calculated</span>
+      </div>
+
+      <!-- Full Visual Route Breakdown (Step-by-Step Pathway) -->
+      <div class="full-route-card">
+        <div class="full-route-header">
+          <span class="metric-label">Full Step-by-Step Route Pathway</span>
+          <span class="route-summary-tag" id="routeSummaryHops">3 Road Segments</span>
+        </div>
+        <!-- Visual chain of nodes & road legs -->
+        <div class="route-chain-container" id="routeChainContainer">
+          <!-- Populated by script.js -->
+        </div>
+      </div>
+
+      <div class="metrics-grid">
+        <!-- Metric 1: Distance -->
+        <div class="metric-card">
+          <span class="metric-label">Total Actual Distance</span>
+          <div class="metric-value" id="totalDistanceDisplay">17 <span class="unit">km</span></div>
+          <span class="metric-sub" id="effectiveCostDisplay">Effective Cost: 17.0 units</span>
+        </div>
+
+        <!-- Metric 2: Travel Time -->
+        <div class="metric-card">
+          <span class="metric-label">Estimated Travel Time</span>
+          <div class="metric-value" id="travelTimeDisplay">20.4 <span class="unit">mins</span></div>
+          <span class="metric-sub" id="trafficDelayDisplay">Free-flowing corridor (50 km/h avg)</span>
+        </div>
+
+        <!-- Metric 3: Visited Sequence -->
+        <div class="metric-card">
+          <span class="metric-label">Algorithm Settled Order</span>
+          <div class="metric-value-small" id="visitedNodesDisplay">A, D, B, H</div>
+          <span class="metric-sub">Nodes finalized by Greedy search</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p>Design and Analysis of Algorithms (DAA) Laboratory Project &bull; Dijkstra's Algorithm</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
